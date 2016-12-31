@@ -5,6 +5,9 @@ import subprocess
 
 __version__ = '0.2.2'
 
+"""ffmpy3 is a fork of the `ffmpy <https://github.com/Ch00k/ffmpy>`_ project and subject to the terms of the MIT license.
+"""
+
 
 class FFmpeg(object):
     """Wrapper for various `FFmpeg <https://www.ffmpeg.org/>`_ related applications (ffmpeg,
