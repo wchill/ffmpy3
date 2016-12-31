@@ -63,7 +63,51 @@ class FFmpeg(object):
     def __repr__(self):
         return '<{0!r} {1!r}>'.format(self.__class__.__name__, self.cmd)
 
-    async def run(self, input_data=None, stdout=None, stderr=None):
+    def run(self, input_data=None, stdout=None, stderr=None):
+        """Execute FFmpeg command line.
+        ``input_data`` can contain input for FFmpeg in case ``pipe`` protocol is used for input.
+        ``stdout`` and ``stderr`` specify where to redirect the ``stdout`` and ``stderr`` of the
+        process. By default no redirection is done, which means all output goes to running shell
+        (this mode should normally only be used for debugging purposes). If FFmpeg ``pipe`` protocol
+        is used for output, ``stdout`` must be redirected to a pipe by passing `subprocess.PIPE` as
+        ``stdout`` argument.
+        Returns a 2-tuple containing ``stdout`` and ``stderr`` of the process. If there was no
+        redirection or if the output was redirected to e.g. `os.devnull`, the value returned will
+        be a tuple of two `None` values, otherwise it will contain the actual ``stdout`` and
+        ``stderr`` data returned by ffmpeg process.
+        More info about ``pipe`` protocol `here <https://ffmpeg.org/ffmpeg-protocols.html#pipe>`_.
+        :param str input_data: input data for FFmpeg to deal with (audio, video etc.) as bytes (e.g.
+            the result of reading a file in binary mode)
+        :param stdout: redirect FFmpeg ``stdout`` there (default is `None` which means no
+            redirection)
+        :param stderr: redirect FFmpeg ``stderr`` there (default is `None` which means no
+            redirection)
+        :return: a 2-tuple containing ``stdout`` and ``stderr`` of the process
+        :rtype: tuple
+        :raise: `FFRuntimeError` in case FFmpeg command exits with a non-zero code;
+            `FFExecutableNotFoundError` in case the executable path passed was not valid
+        """
+        try:
+            self.process = subprocess.Popen(
+                self._cmd,
+                stdin=subprocess.PIPE,
+                stdout=stdout,
+                stderr=stderr
+            )
+        except OSError as e:
+            if e.errno == errno.ENOENT:
+                raise FFExecutableNotFoundError("Executable '{0}' not found".format(self.executable))
+            else:
+                raise
+
+        out = self.process.communicate(input=input_data)
+        if self.process.returncode != 0:
+            raise FFRuntimeError(self.cmd, self.process.returncode, out[0], out[1])
+
+        return out
+
+    @asyncio.coroutine
+    def run_async(self, input_data=None, stdout=None, stderr=None):
         """Asynchronously execute FFmpeg command line.
 
         ``input_data`` can contain input for FFmpeg in case ``pipe`` protocol is used for input.
@@ -75,7 +119,7 @@ class FFmpeg(object):
 
         Note that the parent process is responsible for reading any output from stdout/stderr. This
         should be done even if the output will not be used since the process may otherwise deadlock.
-        This can be done by calling ``communicate()`` on the returned Process or by manually reading
+        This can be done by awaiting on ``communicate()`` on the returned Process or by manually reading
         from the pipes as necessary.
 
         Returns a reference to the child process created for use by the parent program.
@@ -97,7 +141,7 @@ class FFmpeg(object):
                 stdin = asyncio.subprocess.PIPE
             else:
                 stdin = None
-            self.process = await asyncio.create_subprocess_exec(
+            self.process = yield from asyncio.create_subprocess_exec(
                 *self._cmd,
                 stdin=stdin,
                 stdout=stdout,
@@ -114,7 +158,8 @@ class FFmpeg(object):
 
         return self.process
 
-    async def wait(self):
+    @asyncio.coroutine
+    def wait(self):
         """Asynchronously wait for FFmpeg to complete execution.
 
         :return: 0 if FFmpeg finished successfully, None if FFmpeg was not started
@@ -123,7 +168,7 @@ class FFmpeg(object):
         """
         if not self.process:
             return None
-        exitcode = await self.process.wait()
+        exitcode = yield from self.process.wait()
         if exitcode != 0:
             raise FFRuntimeError(self.cmd, exitcode)
         return exitcode
@@ -162,15 +207,18 @@ class FFRuntimeError(Exception):
 
     The resulting exception object will contain the attributes relates to command line execution:
     ``cmd``, ``exit_code``.
+    ``stdout`` and ``stderr`` will also be provided if FFmpeg/FFprobe was executed synchronously.
     """
 
-    def __init__(self, cmd, exit_code):
+    def __init__(self, cmd, exit_code, stdout=None, stderr=None):
         self.cmd = cmd
         self.exit_code = exit_code
 
-        message = "`{0}` exited with status {1}".format(
+        message = "`{0}` exited with status {1}\n\nSTDOUT:\n{2}\n\nSTDERR:\n{3}".format(
             self.cmd,
-            exit_code
+            exit_code,
+            (stdout or b'').decode(),
+            (stderr or b'').decode()
         )
 
         super(FFRuntimeError, self).__init__(message)
