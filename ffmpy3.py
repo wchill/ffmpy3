@@ -9,6 +9,9 @@ __license__ = 'MIT'
 # Fork of https://github.com/Ch00k/ffmpy and subject to the terms of the MIT license.
 # This is an asynchronous version of the linked project.
 
+"""ffmpy3 is a fork of the `ffmpy <https://github.com/Ch00k/ffmpy>`_ project and subject to the terms of the MIT license.
+"""
+
 
 class FFmpeg(object):
     """Wrapper for various `FFmpeg <https://www.ffmpeg.org/>`_ related applications (ffmpeg,
