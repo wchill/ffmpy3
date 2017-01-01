@@ -24,6 +24,7 @@ You guessed it::
 Quick example
 -------------
 The following code snippet executes FFmpeg synchronously, taking ``input.mp4`` from the current directory as the input. It remuxes the contents of ``input.mp4`` into a new file called ``output.avi`` which is saved in the current directory.
+
 .. code:: python
 
   >>> import ffmpy3
@@ -34,7 +35,9 @@ The following code snippet executes FFmpeg synchronously, taking ``input.mp4`` f
   >>> ff.run()
 
 The following code snippet does the same thing as above, but executes FFmpeg asynchronously.
+
 .. code:: python
+
   >>> ff = ffmpy3.FFmpeg(
   ...     inputs={'input.mp4': None},
   ...     outputs={'output.avi': None}

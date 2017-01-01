@@ -1,5 +1,0 @@
-ffmpy
-=====
-
-.. automodule:: ffmpy
-  :members:

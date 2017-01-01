@@ -9,7 +9,7 @@ The simplest example of usage is converting media from one format to another (in
 
 .. code:: python
 
-    >>> from ffmpy import FFmpeg
+    >>> from ffmpy3 import FFmpeg
     ... ff = FFmpeg(
     ...     inputs={'input.ts': None},
     ...     outputs={'output.mp4': None}
@@ -70,9 +70,9 @@ A more complex usage example would be demultiplexing an MPEG transport stream in
         >>> ff.run(stderr=PIPE)
         Traceback (most recent call last):
           File "<stdin>", line 1, in <module>
-          File "/Users/ay/projects/personal/ffmpy/ffmpy.py", line 104, in run
+          File "/Users/ay/projects/personal/ffmpy3/ffmpy3.py", line 104, in run
             raise FFRuntimeError(self.cmd, ff_command.returncode, out[0], out[1])
-        ffmpy.FFRuntimeError: `ffmpeg -hide_banner -i input.ts "-map 0:1" "-c:a copy" "-f mp4" audio.mp4 "-map 0:0" "-c:a copy" "-f mp4" video.mp4` exited with status 1
+        ffmpy3.FFRuntimeError: `ffmpeg -hide_banner -i input.ts "-map 0:1" "-c:a copy" "-f mp4" audio.mp4 "-map 0:0" "-c:a copy" "-f mp4" video.mp4` exited with status 1
 
         STDOUT:
 
@@ -113,7 +113,7 @@ There are cases where the order of inputs and outputs must be preserved (e.g. wh
 
 Using ``pipe`` protocol
 -----------------------
-``ffmpy`` can read input from ``STDIN`` and write output to ``STDOUT``. This can be achieved by using FFmpeg `pipe <https://www.ffmpeg.org/ffmpeg-protocols.html#pipe>`_ protocol. The following example reads data from a file containing raw video frames in RGB format and passes it to ``ffmpy`` on ``STDIN``; ``ffmpy`` in its turn will encode raw frame data with H.264 and pack it in an MP4 container passing the output to ``STDOUT`` (note that you must redirect ``STDOUT`` of the process to a pipe by using ``subprocess.PIPE`` as ``stdout`` value, otherwise the output will get lost):
+``ffmpy3`` can read input from ``STDIN`` and write output to ``STDOUT``. This can be achieved by using FFmpeg `pipe <https://www.ffmpeg.org/ffmpeg-protocols.html#pipe>`_ protocol. The following example reads data from a file containing raw video frames in RGB format and passes it to ``ffmpy3`` on ``STDIN``; ``ffmpy3`` in its turn will encode raw frame data with H.264 and pack it in an MP4 container passing the output to ``STDOUT`` (note that you must redirect ``STDOUT`` of the process to a pipe by using ``subprocess.PIPE`` as ``stdout`` value, otherwise the output will get lost):
 
 .. code:: python
 
@@ -126,11 +126,46 @@ Using ``pipe`` protocol
     'ffmpeg -f rawvideo -pix_fmt rgb24 -s:v 640x480 -i pipe:0 -c:v h264 -f mp4 pipe:1'
     >>> stdout, stderr = ff.run(input_data=open('rawvideo', 'rb').read(), stdout=subprocess.PIPE)
 
+Asynchronous execution
+----------------------
+In certain cases, one may not wish to run ``FFmpeg`` and block on waiting for results or introduce multithreading into one's application. In this case, asynchronous execution using :mod:`asyncio` is possible.
+
+.. code:: python
+
+  >>> ff = ffmpy3.FFmpeg(
+  ...     inputs={'input.mp4': None},
+  ...     outputs={'output.avi': None}
+  ... )
+  >>> ff.run_async()
+  >>> await ff.wait()
+
+Processing ``FFmpeg`` output without multithreading or blocking is also possible. The following code snippet replaces ``CR`` with ``LF`` from FFmpeg's progress output and echoes it to ``STDERR`` while ``FFmpeg`` processes the input video.
+
+.. code:: python
+
+  >>> import asyncio
+  >>> import sys
+  >>> ff = ffmpy3.FFmpeg(
+  ...     inputs={'input.mp4': None},
+  ...     outputs={'output.avi': None},
+  ... )
+  >>> await ff.run_async(stderr=asyncio.subprocess.PIPE)
+  >>> line_buf = bytearray()
+  >>> while True:
+  >>>     in_buf = (await my_stderr.read(128)).replace(b'\r', b'\n')
+  >>>     if not in_buf:
+  >>>         break
+  >>>     line_buf.extend(in_buf)
+  >>>     while b'\n' in line_buf:
+  >>>         line, _, line_buf = line_buf.partition(b'\n')
+  >>>         print(str(line), file=sys.stderr)
+  >>> await ff.wait()
+
 .. _complex_cmds:
 
 Complex command lines
 ---------------------
-``FFmpeg`` command line can get pretty complex, for example, when using `filtering <https://trac.ffmpeg.org/wiki/FilteringGuide>`_. Therefore it is important to understand some of the rules for building command lines building with ``ffmpy``. If an option contains quotes, it must be specified as a separate item in the options list **without** the quotes. However, if a single string is used for options, the quotes of the quoted option must be preserved in the string:
+``FFmpeg`` command line options can get pretty complex, like when using `filtering <https://trac.ffmpeg.org/wiki/FilteringGuide>`_. Therefore, it is important to understand some of the rules for building command lines building with ``ffmpy3``. If an option contains quotes, it must be specified as a separate item in the options list **without** the quotes. However, if a single string is used for options, the quotes of the quoted option must be preserved in the string:
 
 .. code:: python
 
@@ -154,7 +189,7 @@ An even more complex example is a command line that burns the timecode into vide
 
     ffmpeg -i input.ts -vf "drawtext=fontfile=/Library/Fonts/Verdana.ttf: timecode='09\:57\:00\:00': r=25: x=(w-tw)/2: y=h-(2*lh): fontcolor=white: box=1: boxcolor=0x00000000@1" -an output.ts
 
-In ``ffmpy`` it can be expressed in the following way:
+In ``ffmpy3`` it can be expressed in the following way:
 
 .. code:: python
 
@@ -165,7 +200,7 @@ In ``ffmpy`` it can be expressed in the following way:
     >>> ff.cmd
     'ffmpeg -i input.ts -vf "drawtext=fontfile=/Library/Fonts/Verdana.ttf: timecode=\'09\:57\:00\:00\': r=25: x=(w-tw)/2: y=h-(2*lh): fontcolor=white: box=1: boxcolor=0x00000000@1" -an output.ts'
 
-The same command line can be compiled by passing output option as a single string, while keeping the quotes:
+The same command line can be compiled by passing output options as a single string, while keeping the quotes:
 
 .. code:: python
 
