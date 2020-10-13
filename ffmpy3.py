@@ -131,12 +131,11 @@ class FFmpeg(object):
 
         return out
 
-    @asyncio.coroutine
-    def run_async(self, input_data=None, stdout=None, stderr=None):
+    async def run_async(self, input_data=None, stdout=None, stderr=None):
         """Asynchronously execute FFmpeg command line.
 
         ``input_data`` can contain input for FFmpeg in case `pipe <https://ffmpeg.org/ffmpeg-protocols.html#pipe>`_
-        
+
         ``stdout`` and ``stderr`` specify where to redirect the ``stdout`` and ``stderr`` of the
         process. By default no redirection is done, which means all output goes to running shell
         (this mode should normally only be used for debugging purposes).
@@ -177,7 +176,7 @@ class FFmpeg(object):
                 stdin = asyncio.subprocess.PIPE
             else:
                 stdin = None
-            self.process = yield from asyncio.create_subprocess_exec(
+            self.process = await asyncio.create_subprocess_exec(
                 *self._cmd,
                 stdin=stdin,
                 stdout=stdout,
@@ -194,8 +193,7 @@ class FFmpeg(object):
 
         return self.process
 
-    @asyncio.coroutine
-    def wait(self):
+    async def wait(self):
         """Asynchronously wait for the process to complete execution.
 
         Raises
@@ -209,8 +207,8 @@ class FFmpeg(object):
             0 if the process finished successfully, or None if it has not been started
         """
         if not self.process:
-            return None
-        exitcode = yield from self.process.wait()
+            return
+        exitcode = await self.process.wait()
         if exitcode != 0:
             raise FFRuntimeError(self.cmd, exitcode)
         return exitcode
@@ -222,7 +220,7 @@ class FFprobe(FFmpeg):
     Compiles FFprobe command line from passed arguments (executable path, options, inputs).
     FFprobe executable by default is taken from ``PATH`` but can be overridden with an
     absolute path.
-    
+
     Parameters
     -----------
     executable : str
