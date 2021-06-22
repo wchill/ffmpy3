@@ -267,9 +267,9 @@ class FFRuntimeError(Exception):
 
         message = "`{0}` exited with status {1}\n\nSTDOUT:\n{2}\n\nSTDERR:\n{3}".format(
             self.cmd,
-            exit_code,
-            stdout.decode(),
-            stderr.decode()
+            self.exit_code,
+            self.stdout.decode(),
+            self.stderr.decode()
         )
 
         super(FFRuntimeError, self).__init__(message)
