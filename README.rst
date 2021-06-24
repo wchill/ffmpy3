@@ -47,7 +47,7 @@ The following code snippet does the same thing as above, but executes FFmpeg asy
 
 Documentation
 -------------
-http://ffmpy3.readthedocs.io/en/latest
+http://ffmpy3.rtfd.io
 
 See `Examples <http://ffmpy3.readthedocs.io/en/latest/examples.html>`_ section for usage examples.
 
