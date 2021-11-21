@@ -259,7 +259,7 @@ class FFRuntimeError(Exception):
         The contents of stderr (only if executed synchronously).
     """
 
-    def __init__(self, cmd, exit_code, stdout, stderr):
+    def __init__(self, cmd, exit_code, stdout=b'', stderr=b''):
         self.cmd = cmd
         self.exit_code = exit_code
         self.stdout = stdout or b''
