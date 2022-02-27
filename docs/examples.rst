@@ -149,8 +149,9 @@ Processing ``FFmpeg`` output without multithreading or blocking is also possible
   ...     inputs={'input.mp4': None},
   ...     outputs={'output.avi': None},
   ... )
-  >>> await ff.run_async(stderr=asyncio.subprocess.PIPE)
+  >>> _ffmpeg_process = await ff.run_async(stderr=asyncio.subprocess.PIPE)
   >>> line_buf = bytearray()
+  >>> my_stderr =_ffmpeg_process.stderr
   >>> while True:
   >>>     in_buf = (await my_stderr.read(128)).replace(b'\r', b'\n')
   >>>     if not in_buf:
