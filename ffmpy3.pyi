@@ -1,7 +1,6 @@
 import subprocess
 from asyncio.subprocess import Process
-from typing import Optional, List, Dict, Union, IO, Tuple, AnyStr
-
+from typing import IO, AnyStr, Dict, List, Optional, Tuple, Union
 
 class FFmpeg:
     executable: str
